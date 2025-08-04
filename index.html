@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🔳 توليد QR احترافي</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qr-code-styling/lib/qr-code-styling.js"></script>
+    <style>
+      /* هاد الـCSS هو اللي غيخلي الـQR يبان بدقة عالية فالشاشة */
+      #qr canvas {
+        width: 100% !important; /* تأكد من أن الـcanvas كيعمر الـdiv ديالو كامل */
+        height: 100% !important; /* تأكد من أن الـcanvas كيعمر الـdiv ديالو كامل */
+        /* هاد الخاصيات كيحسّنو جودة عرض الصورة ملي كتصغر أو تكبر */
+        image-rendering: crisp-edges; /* للمتصفحات الحديثة */
+        image-rendering: -moz-crisp-edges; /* لمتصفح فايرفوكس */
+        image-rendering: -webkit-optimize-contrast; /* لمتصفحات كروم وسفاري */
+        image-rendering: optimizeSpeed; /* لمتصفحات قديمة، كتعاون باش الصورة تبان حادة */
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white shadow-xl rounded-xl p-6 w-full max-w-md">
+      <h1 class="text-2xl font-bold mb-4 text-center">🔳 توليد QR احترافي</h1>
+      <label class="block mb-2 font-semibold">🔗 النص أو الرابط:</label>
+      <input id="text" type="text" placeholder="أدخل هنا..." class="w-full p-2 border rounded mb-4" />
+
+      <label class="block mb-2 font-semibold">🎨 اللون:</label>
+      <input id="color" type="color" value="#000000" class="w-16 h-10 mb-4" />
+
+      <label class="block mb-2 font-semibold">🔘 الشكل:</label>
+      <select id="style" class="w-full p-2 border rounded mb-4">
+        <option value="square">مربعات</option>
+        <option value="dots">نقط</option>
+        <option value="rounded">دائري</option>
+      </select>
+
+      <label class="block mb-2 font-semibold">🖼️ شعار (اختياري):</label>
+      <input id="logo" type="file" accept="image/*" class="mb-4" />
+
+      <div class="flex justify-center pt-4">
+        <div id="qr" class="w-[200px] h-[200px] overflow-hidden"></div>
+      </div>
+
+      <div class="mt-6 flex flex-col gap-2">
+        <button id="download" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">⬇️ تحميل QR</button>
+        <button id="share" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">📤 مشاركة QR</button>
+      </div>
+    </div>
+
+    <script>
+      const initialText = document.getElementById("text").value;
+
+      const qrCode = new QRCodeStyling({
+        width: 1000, // هاد القيم كيتصاوب بهم الـQR Code داخلياً بدقة عالية جداً
+        height: 1000,
+        type: "canvas",
+        data: initialText,
+        image: "",
+        dotsOptions: {
+          color: "#000",
+          type: "square",
+        },
+        backgroundOptions: {
+          color: "#fff",
+        },
+        imageOptions: {
+          crossOrigin: "anonymous",
+          margin: 20,
+        },
+      });
+
+      qrCode.append(document.getElementById("qr"));
+
+      function updateQRCode() {
+        const text = document.getElementById("text").value;
+        const color = document.getElementById("color").value;
+        const shape = document.getElementById("style").value;
+
+        qrCode.update({
+          data: text,
+          dotsOptions: {
+            color: color,
+            type: shape,
+          },
+        });
+      }
+
+      document.getElementById("text").addEventListener("input", updateQRCode);
+      document.getElementById("color").addEventListener("input", updateQRCode);
+      document.getElementById("style").addEventListener("change", updateQRCode);
+
+      document.getElementById("logo").addEventListener("change", function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          qrCode.update({ image: event.target.result });
+        };
+        reader.readAsDataURL(file);
+      });
+
+      document.getElementById("download").addEventListener("click", () => {
+        qrCode.download({ name: "qr-code", extension: "png" });
+      });
+
+      document.getElementById("share").addEventListener("click", async () => {
+        const canvas = document.querySelector("#qr canvas");
+        canvas.toBlob(async (blob) => {
+          const file = new File([blob], "qr-code.png", { type: "image/png" });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({ files: [file], title: "QR Code", text: "ها هو كود QR ديالك!" });
+            } catch (e) {
+              alert("تم إلغاء المشاركة");
+            }
+          } else {
+            alert("المشاركة غير مدعومة على هذا الجهاز.");
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
