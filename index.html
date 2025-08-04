@@ -66,6 +66,25 @@
         padding-top: 1rem;
         padding-bottom: 1rem;
         min-height: 250px; /* زدنا الطول شوية باش يكون بلاصة للنص */
+        border: 2px dashed #a0aec0; /* إطار متقطع باش يبان كأنه placeholder */
+        border-radius: 1rem;
+        color: #a0aec0; /* لون النص داخل الـplaceholder */
+        font-size: 1.2rem;
+        text-align: center;
+      }
+      #qr {
+          /* #qr في البداية كتكون مخفية أو عندها حجم صغير */
+          width: 0px; 
+          height: 0px;
+          overflow: hidden;
+          transition: width 0.3s ease, height 0.3s ease; /* باش تبان بانسيابية */
+      }
+      #qr.active {
+          width: 200px; /* الحجم اللي باغي للـQR ملي كيبان */
+          height: 200px;
+          background-color: #FFFF00; /* خلفية الـQR Code نفسه */
+          border-radius: 0.5rem;
+          overflow: hidden;
       }
       .qr-text-below {
         margin-top: 1rem; /* مسافة بين الـQR والنص */
@@ -92,6 +111,17 @@
         box-shadow: 0 0 0 3px rgba(16,185,129,0.5); /* ظل أخضر إضافي */
         transform: scale(1.1);
       }
+      /* ستايل لرسالة الـplaceholder */
+      #qr-placeholder {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 200px; /* نفس ارتفاع الـQR باش مايتبدلش الحجم بزاف */
+      }
+      #qr-placeholder.hidden {
+          display: none;
+      }
     </style>
   </head>
   <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
@@ -106,11 +136,12 @@
       <div class="input-group">
         <label class="block mb-2 font-semibold">🎨 اختر اللون:</label>
         <div id="color-palette" class="flex gap-3 mb-4 flex-wrap">
-          <div class="color-swatch" style="background-color: #000000;" data-color="#000000"></div>
-          <div class="color-swatch" style="background-color: #0000FF;" data-color="#0000FF"></div>
+          <div class="color-swatch selected" style="background-color: #000000;" data-color="#000000"></div> <div class="color-swatch" style="background-color: #0000FF;" data-color="#0000FF"></div>
           <div class="color-swatch" style="background-color: #FF0000;" data-color="#FF0000"></div>
           <div class="color-swatch" style="background-color: #008000;" data-color="#008000"></div>
-          <div class="color-swatch" style="background-color: #800080;" data-color="#800080"></div> <div class="color-swatch" style="background-color: #FFA500;" data-color="#FFA500"></div> </div>
+          <div class="color-swatch" style="background-color: #800080;" data-color="#800080"></div>
+          <div class="color-swatch" style="background-color: #FFA500;" data-color="#FFA500"></div>
+        </div>
       </div>
       <div class="input-group">
         <label for="style">🔘 الشكل:</label>
@@ -132,6 +163,9 @@
       </div>
 
       <div class="qr-display-area">
+        <div id="qr-placeholder">
+            <span>النتيجة ستظهر هنا</span>
+        </div>
         <div id="qr" class="w-[200px] h-[200px] overflow-hidden"></div>
         <div id="text-below-qr" class="qr-text-below"></div>
       </div>
@@ -143,7 +177,11 @@
     </div>
 
     <script>
-      const initialText = document.getElementById("text").value;
+      const qrDiv = document.getElementById("qr");
+      const qrPlaceholder = document.getElementById("qr-placeholder");
+      const textInput = document.getElementById("text");
+
+      const initialText = textInput.value;
       const initialBottomText = document.getElementById("bottomText").value;
       let currentQRColor = "#000000"; // اللون الافتراضي (أول لون غيبان)
 
@@ -165,29 +203,51 @@
           margin: 20,
         },
         margin: 30, // الهامش الأبيض حول الـQR Code نفسه
+        cornersSquareOptions: {
+          type: 'square', 
+          color: currentQRColor,
+        },
+        cornersDotOptions: {
+          type: 'square', 
+          color: currentQRColor,
+        },
       });
 
-      qrCode.append(document.getElementById("qr"));
+      qrCode.append(qrDiv); // كنضيفو الـQR Code لـdiv#qr
 
       function updateBottomText() {
         document.getElementById("text-below-qr").innerText = document.getElementById("bottomText").value;
       }
 
       function updateQRCode() {
-        const text = document.getElementById("text").value;
+        const text = textInput.value;
         const shape = document.getElementById("style").value;
 
-        qrCode.update({
-          data: text,
-          dotsOptions: {
-            color: currentQRColor, // غيستعمل اللون المختار حالياً
-            type: shape,
-          },
-          backgroundOptions: {
-             color: "#FFFF00", // باش تبقى ديما صفراء
-          },
-        });
-        updateBottomText();
+        if (text.trim() === "") { // إذا كان حقل النص فارغاً
+          qrPlaceholder.classList.remove("hidden"); // كنظهرو الـplaceholder
+          qrDiv.classList.remove("active"); // كنخفيو الـQR Code الحقيقي
+          document.getElementById("text-below-qr").innerText = ""; // كنخفيو النص اللي تحت الـQR
+        } else { // إذا كان فيه نص
+          qrPlaceholder.classList.add("hidden"); // كنخفيو الـplaceholder
+          qrDiv.classList.add("active"); // كنظهرو الـQR Code
+          qrCode.update({
+            data: text,
+            dotsOptions: {
+              color: currentQRColor,
+              type: shape,
+            },
+            backgroundOptions: {
+               color: "#FFFF00",
+            },
+            cornersSquareOptions: { 
+              color: currentQRColor,
+            },
+            cornersDotOptions: { 
+              color: currentQRColor,
+            },
+          });
+          updateBottomText();
+        }
       }
 
       // تحديد مربع اللون المختار حالياً
@@ -202,16 +262,16 @@
       }
 
       // إضافة المستمعين للأحداث
-      document.getElementById("text").addEventListener("input", updateQRCode);
+      textInput.addEventListener("input", updateQRCode);
       document.getElementById("style").addEventListener("change", updateQRCode);
       document.getElementById("bottomText").addEventListener("input", updateQRCode);
 
       // المستمعين الجدد لمربعات الألوان
       document.querySelectorAll(".color-swatch").forEach(swatch => {
         swatch.addEventListener("click", function() {
-          currentQRColor = this.dataset.color; // خدينا اللون من data-color
-          setActiveColorSwatch(currentQRColor); // وضع علامة على اللون المختار
-          updateQRCode(); // تحديث الـQR Code باللون الجديد
+          currentQRColor = this.dataset.color;
+          setActiveColorSwatch(currentQRColor);
+          updateQRCode();
         });
       });
 
@@ -219,11 +279,20 @@
         const file = e.target.files[0];
         if (!file) {
             qrCode.update({ image: "" });
+            // إلى حيدنا الشعار وماكاينش نص، رجع الـplaceholder
+            if (textInput.value.trim() === "") {
+                updateQRCode(); // باش يرجع الـplaceholder
+            }
             return;
         }
         const reader = new FileReader();
         reader.onload = function (event) {
           qrCode.update({ image: event.target.result });
+          // ملي كيتحمل الشعار، تأكد أن الـQR باين
+          if (textInput.value.trim() !== "") {
+              qrPlaceholder.classList.add("hidden");
+              qrDiv.classList.add("active");
+          }
         };
         reader.readAsDataURL(file);
       });
@@ -232,43 +301,65 @@
         const qrCanvas = document.querySelector("#qr canvas");
         const bottomTextValue = document.getElementById("bottomText").value;
 
-        if (!bottomTextValue.trim()) {
-          qrCode.download({ name: "qr-code", extension: "png" });
-          return;
+        // تحديد أحجام الـQR Code
+        const qrWidth = qrCanvas.width;
+        const qrHeight = qrCanvas.height;
+
+        // إعدادات النص في الأسفل
+        const fontSize = 70; 
+        const font = `bold ${fontSize}px Arial`;
+        const textPadding = 40; 
+        const bottomMarginForImage = 50; 
+
+        // إعدادات الإطار الأبيض
+        const strokeWidth = 10; // سمك الإطار الأبيض
+        const frameColor = '#FFFFFF'; // لون الإطار الأبيض
+
+        // حساب الأبعاد الكلية للـcanvas الجديد (مع الإطار)
+        let totalWidth = qrWidth + (strokeWidth * 2);
+        let totalHeight = qrHeight + (strokeWidth * 2);
+
+        // إذا كان هناك نص في الأسفل، نضيف المساحة ديالو
+        if (bottomTextValue.trim()) {
+            totalHeight += fontSize + textPadding + bottomMarginForImage;
         }
 
         const combinedCanvas = document.createElement("canvas");
         const ctx = combinedCanvas.getContext("2d");
 
-        const qrWidth = qrCanvas.width;
-        const qrHeight = qrCanvas.height;
+        combinedCanvas.width = totalWidth;
+        combinedCanvas.height = totalHeight; 
 
-        const fontSize = 70; 
-        const font = `bold ${fontSize}px Arial`;
-        const textPadding = 40; 
+        // 1. رسم الخلفية البيضاء للإطار
+        ctx.fillStyle = frameColor; 
+        ctx.fillRect(0, 0, combinedCanvas.width, combinedCanvas.height);
 
-        const bottomMarginForImage = 50; 
+        // 2. رسم الخلفية ديال الـQR Code (الصفرة) داخل الإطار
+        ctx.fillStyle = '#FFFF00'; // لون الخلفية الصفراء ديال الـQR Code
+        ctx.fillRect(strokeWidth, strokeWidth, qrWidth, qrHeight); // مساحة الـQR Code فقط
 
-        combinedCanvas.width = qrWidth;
-        combinedCanvas.height = qrHeight + fontSize + textPadding + bottomMarginForImage; 
+        // 3. رسم الـQR Code نفسه (الـcanvas ديالو) داخل الخلفية الصفراء
+        ctx.drawImage(qrCanvas, strokeWidth, strokeWidth);
 
-        ctx.drawImage(qrCanvas, 0, 0);
+        // 4. رسم النص في الأسفل إذا كان موجوداً
+        if (bottomTextValue.trim()) {
+            // مساحة النص السفلى (خلفية بيضاء للنص)
+            ctx.fillStyle = '#FFFFFF'; // لون الخلفية البيضاء للنص
+            ctx.fillRect(strokeWidth, qrHeight + strokeWidth, qrWidth, fontSize + textPadding + bottomMarginForImage);
 
-        ctx.fillStyle = '#FFFFFF'; 
-        ctx.fillRect(0, qrHeight, combinedCanvas.width, combinedCanvas.height - qrHeight);
+            ctx.font = font;
+            ctx.fillStyle = '#000000'; // لون النص أسود
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
 
-        ctx.font = font;
-        ctx.fillStyle = '#000000';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
+            const textX = (qrWidth / 2) + strokeWidth;
+            const textY = qrHeight + textPadding + strokeWidth;
 
-        const textX = combinedCanvas.width / 2;
-        const textY = qrHeight + textPadding;
-
-        ctx.fillText(bottomTextValue, textX, textY);
+            ctx.fillText(bottomTextValue, textX, textY);
+        }
 
         const link = document.createElement('a');
-        link.download = 'qr-code-with-text.png';
+        link.download = 'qr-code-with-frame.png';
         link.href = combinedCanvas.toDataURL('image/png');
         document.body.appendChild(link);
         link.click();
@@ -291,10 +382,13 @@
         });
       });
 
-      // في البداية: تحديث النص وتحديد اللون الافتراضي المختار
-      updateBottomText();
+      // في البداية: تحديث الواجهة بناءً على حالة حقل النص
+      updateBottomText(); // لتحديث النص في الأسفل (إن وجد)
       setActiveColorSwatch(currentQRColor); // وضع علامة على اللون الافتراضي
-      updateQRCode(); // تحديث الـQR Code باللون الافتراضي
+
+      // هنا يتم فحص حقل النص عند تحميل الصفحة لأول مرة
+      // إذا كان فارغا، الـplaceholder هو اللي كيبان، وإلا كيتبان الـQR Code
+      updateQRCode(); 
     </script>
   </body>
 </html>
