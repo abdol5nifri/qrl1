@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/qr-code-styling/lib/qr-code-styling.js"></script>
     <style>
         /* ستايل باش الكانفاس يبان مزيان */
-        #qr canvas {
+        #qr canvas, #qr-inside-image-frame canvas {
             width: 100% !important;
             height: 100% !important;
             image-rendering: crisp-edges;
@@ -82,11 +82,12 @@
         #qr-placeholder.hidden {
             display: none;
         }
-        #qr {
-            width: 200px;
-            height: 200px;
+        /* تعديل الحجم الثابت للـQR */
+        #qr, #qr-inside-image-frame {
+            width: 250px; /* حجم ثابت للـQR */
+            height: 250px; /* حجم ثابت للـQR */
             overflow: hidden;
-            background-color: #FFFF00;
+            background-color: #FFFFFF;
             border-radius: 0.5rem;
         }
         #qr.hidden {
@@ -152,6 +153,7 @@
         .frame-swatch.selected {
             border-color: #10B981;
             box-shadow: 0 0 0 3px rgba(16,185,129,0.5);
+            transform: scale(1.05);
         }
         .frame-swatch .frame-part {
             position: absolute;
@@ -219,7 +221,38 @@
             bottom: 5px;
             right: 5px;
         }
-
+        /* ستايلات جديدة للإطار اللي فيه التصويرة */
+        .frame-swatch[data-frame="image-frame"] {
+            background-color: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+            width: 70px;
+            height: 70px;
+            position: relative;
+        }
+        .frame-swatch[data-frame="image-frame"] .frame-part.image {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .frame-swatch[data-frame="image-frame"] .qr-box {
+            position: absolute;
+            z-index: 1;
+            top: 15px; /* Adjust as needed */
+            left: 15px;
+            width: 40px; /* Adjust as needed */
+            height: 40px;
+            background-color: #333;
+            border: 1px solid #333;
+        }
         /* ستايلات جديدة للإطار ديال الـDIV اللي غادي يظهر */
         #combined-qr-container {
             width: 250px;
@@ -260,12 +293,40 @@
         #qr-frame-banner.rounded-frame-shape {
             border-radius: 0.75rem 0.75rem 0 0;
         }
+        #image-frame-container {
+            position: relative;
+            width: 100%;
+            height: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #image-frame-container.hidden {
+            display: none;
+        }
+        #qr-inside-image-frame {
+            position: absolute;
+            top: 50%; /* تم تعديل هذا السطر */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60%; /*Adjust size*/
+            height: auto;
+            z-index: 1;
+        }
+        #qr-inside-image-frame canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        #frame-image {
+            width: 100%;
+            height: auto;
+            z-index: 0;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
     <div class="bg-white shadow-xl rounded-xl p-6 w-full max-w-md">
         <h1 class="text-3xl font-extrabold mb-6 text-center text-gray-800">🔳 توليد QR احترافي</h1>
-
         <div class="input-group">
             <label for="text">🔗 النص أو الرابط:</label>
             <input id="text" type="text" placeholder="أدخل هنا..." />
@@ -319,9 +380,12 @@
                     <div class="frame-part">Scan Me!</div>
                     <div class="qr-box"></div>
                 </div>
+                <div class="frame-swatch" data-frame="image-frame">
+                    <div class="qr-box"></div>
+                    <div class="frame-part image" style="background-image: url('https://i.postimg.cc/2yj7xHxC/scan-me-Mesa-de-trabajo-1.png');"></div>
+                </div>
             </div>
         </div>
-
         <div class="qr-display-area">
             <div id="qr-placeholder">
                 <i class="fas fa-qrcode text-6xl text-gray-400 mb-4"></i>
@@ -329,17 +393,19 @@
             </div>
             <div id="combined-qr-container" class="hidden">
                 <div id="qr-frame-banner" class="hidden"></div>
+                <div id="image-frame-container" class="hidden">
+                    <img id="frame-image" class="frame-image" src="https://i.postimg.cc/2yj7xHxC/scan-me-Mesa-de-trabajo-1.png" alt="QR Frame">
+                    <div id="qr-inside-image-frame"></div>
+                </div>
                 <div id="qr"></div>
                 <div id="text-below-qr" class="qr-text-below hidden"></div>
             </div>
         </div>
-
         <div class="button-group">
             <button id="download" class="bg-green-500 text-white hover:bg-green-600">⬇️ تحميل QR</button>
             <button id="share" class="bg-blue-500 text-white hover:bg-blue-600">📤 مشاركة QR</button>
         </div>
     </div>
-
     <script>
         const qrDiv = document.getElementById("qr");
         const qrPlaceholder = document.getElementById("qr-placeholder");
@@ -349,7 +415,9 @@
         const textBelowQrDiv = document.getElementById("text-below-qr");
         const qrBannerDiv = document.getElementById("qr-frame-banner");
         const combinedQrContainer = document.getElementById("combined-qr-container");
-
+        const imageFrameContainer = document.getElementById("image-frame-container");
+        const qrInsideImageFrame = document.getElementById("qr-inside-image-frame");
+        const frameImage = document.getElementById("frame-image");
         let currentQRColor = "#000000";
         let currentQRShape = "square";
         let currentFrame = "default";
@@ -389,30 +457,27 @@
         async function createCombinedCanvas() {
             const text = textInput.value;
             if (text.trim() === "") return null;
-            
-            // نجيبو الـcanvas اللي كاين فالـDOM مباشرة
-            const qrCanvas = document.querySelector("#qr canvas");
-            
-            // نتأكدو من وجود الـQR Code قبل ما نكملو
+            let qrCanvas = null;
+            if (currentFrame === "image-frame") {
+                 qrCanvas = document.querySelector("#qr-inside-image-frame canvas");
+            } else {
+                 qrCanvas = document.querySelector("#qr canvas");
+            }
             if (!qrCanvas || qrCanvas.width === 0 || qrCanvas.height === 0) {
                 console.error("QR Code canvas is not available.");
                 return null;
             }
-
             const bottomTextValue = bottomTextElement.value;
             const frameTextValue = frameTextElement.value;
-            
             const qrWidth = qrCanvas.width;
             const qrHeight = qrCanvas.height;
-
             const baseMargin = 30;
             const textPadding = 40;
             const bannerHeight = 100;
             const framePadding = 50;
-
+            const frameImageSrc = "https://i.postimg.cc/y8bPtKng/Picsart-25-08-05-15-09-36-797.png";
             let totalWidth = qrWidth + (framePadding * 2);
             let totalHeight = qrHeight + (framePadding * 2);
-
             if (bottomTextValue.trim()) {
                 const tempCtx = document.createElement("canvas").getContext("2d");
                 const fontSize = 100;
@@ -420,27 +485,28 @@
                 const textMetrics = tempCtx.measureText(bottomTextValue);
                 totalHeight += fontSize + textPadding;
             }
-
-            if (currentFrame !== "default") {
+            if (currentFrame !== "default" && currentFrame !== "image-frame") {
                 totalHeight += bannerHeight;
             }
-            
+            if (currentFrame === "image-frame") {
+                const img = new Image();
+                img.src = frameImageSrc;
+                await new Promise((resolve) => { img.onload = resolve; });
+                totalWidth = img.width;
+                totalHeight = img.height;
+            }
             const combinedCanvas = document.createElement("canvas");
             const ctx = combinedCanvas.getContext("2d");
             combinedCanvas.width = totalWidth;
             combinedCanvas.height = totalHeight;
-            
             ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(0, 0, combinedCanvas.width, combinedCanvas.height);
-            
             let qrYPosition = 0;
             if (currentFrame === "top-banner" || currentFrame === "rounded-frame") {
                 const bannerY = 0;
                 const bannerX = 0;
                 const bannerW = combinedCanvas.width;
                 const bannerH = bannerHeight;
-                
-                // هنا استخدمنا currentQRColor
                 ctx.fillStyle = currentQRColor;
                 if (currentFrame === "top-banner") {
                     ctx.beginPath();
@@ -464,21 +530,32 @@
                     ctx.closePath();
                     ctx.fill();
                 }
-                
                 ctx.font = `bold 60px Arial`;
                 ctx.fillStyle = '#FFFFFF';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(frameTextValue, combinedCanvas.width / 2, bannerH / 2);
-                
                 qrYPosition = bannerH;
-            } else {
-                qrYPosition = 0;
+                ctx.drawImage(qrCanvas, (combinedCanvas.width - qrWidth) / 2, qrYPosition + (framePadding / 2));
+            } else if (currentFrame === "bottom-banner") {
+                 ctx.drawImage(qrCanvas, (combinedCanvas.width - qrWidth) / 2, (framePadding / 2));
+            } else if (currentFrame === "image-frame") {
+                const img = new Image();
+                img.src = frameImageSrc;
+                await new Promise((resolve) => { img.onload = resolve; });
+                // draw image frame first
+                ctx.drawImage(img, 0, 0, combinedCanvas.width, combinedCanvas.height);
+                // draw QR code over the image frame
+                const qrSize = combinedCanvas.width * 0.5; // QR code takes up 50% of the image
+                const qrX = (combinedCanvas.width - qrSize) / 2;
+                const qrY = (combinedCanvas.height - qrSize) / 2;
+                ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
+            } else { // default frame
+                ctx.drawImage(qrCanvas, (combinedCanvas.width - qrWidth) / 2, (framePadding / 2));
             }
-            
-            ctx.drawImage(qrCanvas, (combinedCanvas.width - qrWidth) / 2, qrYPosition + (framePadding / 2));
-            
-            if (bottomTextValue.trim()) {
+            if (currentFrame === "image-frame") {
+                // do nothing, text is part of image frame
+            } else if (bottomTextValue.trim()) {
                 const fontSize = 70;
                 ctx.font = `bold ${fontSize}px Arial`;
                 ctx.fillStyle = '#000000';
@@ -486,14 +563,11 @@
                 ctx.textBaseline = 'top';
                 ctx.fillText(bottomTextValue, combinedCanvas.width / 2, qrYPosition + qrHeight + framePadding + textPadding);
             }
-
             if (currentFrame === "bottom-banner") {
                 const bannerY = qrYPosition + qrHeight + framePadding;
                 const bannerX = 0;
                 const bannerW = combinedCanvas.width;
                 const bannerH = bannerHeight;
-                
-                // هنا استخدمنا currentQRColor
                 ctx.fillStyle = currentQRColor;
                 ctx.beginPath();
                 ctx.moveTo(bannerX, bannerY + bannerH * 0.2);
@@ -503,14 +577,12 @@
                 ctx.lineTo(bannerX, bannerY + bannerH);
                 ctx.closePath();
                 ctx.fill();
-                
                 ctx.font = `bold 60px Arial`;
                 ctx.fillStyle = '#FFFFFF';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(frameTextValue, combinedCanvas.width / 2, bannerY + bannerH / 2);
             }
-            
             return combinedCanvas;
         }
 
@@ -518,92 +590,104 @@
             const text = textInput.value;
             const bottomTextValue = bottomTextElement.value;
             const frameTextValue = frameTextElement.value;
-
             if (text.trim() === "") {
                 qrPlaceholder.classList.remove("hidden");
                 combinedQrContainer.classList.add("hidden");
                 return;
             }
-
             qrPlaceholder.classList.add("hidden");
             combinedQrContainer.classList.remove("hidden");
-            
-            // تعديل لون البانر مباشرة في DOM
-            if (currentFrame !== "default") {
-                qrBannerDiv.style.backgroundColor = currentQRColor;
-            } else {
-                qrBannerDiv.style.backgroundColor = ''; // نرجعو اللون كيف ما كان
-            }
-
-            qrCode.update({
-                data: text,
-                dotsOptions: {
-                    color: currentQRColor,
-                    type: currentQRShape,
-                },
-                backgroundOptions: {
-                    color: (currentFrame === "default") ? "#FFFFFF" : "#FFFF00",
-                },
-                image: logoImage,
-                cornersSquareOptions: {
-                    color: currentQRColor,
-                },
-                cornersDotOptions: {
-                    color: currentQRColor,
-                },
-            });
-            
-            textBelowQrDiv.classList.add("hidden");
-            if (bottomTextValue.trim()) {
-                textBelowQrDiv.classList.remove("hidden");
-                textBelowQrDiv.innerText = bottomTextValue;
-            }
-
-            qrBannerDiv.classList.remove("top-banner-shape", "bottom-banner-shape", "rounded-frame-shape");
+            qrDiv.classList.add("hidden");
             qrBannerDiv.classList.add("hidden");
-
-            if (currentFrame === "top-banner") {
-                qrBannerDiv.classList.remove("hidden");
-                qrBannerDiv.classList.add("top-banner-shape");
-                qrBannerDiv.innerText = frameTextValue;
-            } else if (currentFrame === "bottom-banner") {
-                qrBannerDiv.classList.remove("hidden");
-                qrBannerDiv.classList.add("bottom-banner-shape");
-                qrBannerDiv.innerText = frameTextValue;
-            } else if (currentFrame === "rounded-frame") {
-                qrBannerDiv.classList.remove("hidden");
-                qrBannerDiv.classList.add("rounded-frame-shape");
-                qrBannerDiv.innerText = frameTextValue;
+            textBelowQrDiv.classList.add("hidden");
+            imageFrameContainer.classList.add("hidden");
+            if (currentFrame === "image-frame") {
+                imageFrameContainer.classList.remove("hidden");
+                qrCode.update({
+                    data: text,
+                    dotsOptions: {
+                        color: "#000000",
+                        type: currentQRShape,
+                    },
+                    backgroundOptions: {
+                        color: "transparent",
+                    },
+                    image: logoImage,
+                    cornersSquareOptions: {
+                        color: "#000000",
+                    },
+                    cornersDotOptions: {
+                        color: "#000000",
+                    },
+                });
+                qrCode.append(qrInsideImageFrame);
+            } else {
+                qrDiv.classList.remove("hidden");
+                if (currentFrame !== "default") {
+                    qrBannerDiv.style.backgroundColor = currentQRColor;
+                } else {
+                    qrBannerDiv.style.backgroundColor = '';
+                }
+                qrCode.update({
+                    data: text,
+                    dotsOptions: {
+                        color: currentQRColor,
+                        type: currentQRShape,
+                    },
+                    backgroundOptions: {
+                        color: "#FFFFFF",
+                    },
+                    image: logoImage,
+                    cornersSquareOptions: {
+                        color: currentQRColor,
+                    },
+                    cornersDotOptions: {
+                        color: currentQRColor,
+                    },
+                });
+                qrCode.append(qrDiv);
+                if (bottomTextValue.trim()) {
+                    textBelowQrDiv.classList.remove("hidden");
+                    textBelowQrDiv.innerText = bottomTextValue;
+                }
+                qrBannerDiv.classList.remove("top-banner-shape", "bottom-banner-shape", "rounded-frame-shape");
+                qrBannerDiv.classList.add("hidden");
+                if (currentFrame === "top-banner") {
+                    qrBannerDiv.classList.remove("hidden");
+                    qrBannerDiv.classList.add("top-banner-shape");
+                    qrBannerDiv.innerText = frameTextValue;
+                } else if (currentFrame === "bottom-banner") {
+                    qrBannerDiv.classList.remove("hidden");
+                    qrBannerDiv.classList.add("bottom-banner-shape");
+                    qrBannerDiv.innerText = frameTextValue;
+                } else if (currentFrame === "rounded-frame") {
+                    qrBannerDiv.classList.remove("hidden");
+                    qrBannerDiv.classList.add("rounded-frame-shape");
+                    qrBannerDiv.innerText = frameTextValue;
+                }
             }
         }
-
-        // دالة جديدة لتحديث ألوان الإطارات المصغرة
         function updateFramePreviewsColor() {
-            document.querySelectorAll('.frame-swatch .frame-part').forEach(el => {
+            document.querySelectorAll('.frame-swatch .frame-part:not(.image)').forEach(el => {
                 el.style.backgroundColor = currentQRColor;
             });
         }
-
         function setActiveColorSwatch(selectedColor) {
             document.querySelectorAll('.color-swatch').forEach(swatch => {
                 swatch.classList.toggle('selected', swatch.dataset.color === selectedColor);
             });
         }
-
         function setActiveFrameSwatch(selectedFrame) {
             document.querySelectorAll('.frame-swatch').forEach(swatch => {
                 swatch.classList.toggle('selected', swatch.dataset.frame === selectedFrame);
             });
         }
-
         function updateFrameTextPreviews() {
             const frameText = frameTextElement.value;
-            document.querySelectorAll('.frame-swatch .frame-part').forEach(el => {
+            document.querySelectorAll('.frame-swatch .frame-part:not(.image)').forEach(el => {
                 el.innerText = frameText;
             });
         }
-        
-        // المستمعين للأحداث
         textInput.addEventListener("input", updateDisplay);
         document.getElementById("style").addEventListener("change", (e) => {
             currentQRShape = e.target.value;
@@ -618,7 +702,7 @@
             swatch.addEventListener("click", function() {
                 currentQRColor = this.dataset.color;
                 setActiveColorSwatch(currentQRColor);
-                updateFramePreviewsColor(); // دابا كنعيطو لهاد الدالة الجديدة
+                updateFramePreviewsColor();
                 updateDisplay();
             });
         });
@@ -643,15 +727,12 @@
                 updateDisplay();
             }
         });
-
-        // دالة التحميل المعدلة
         document.getElementById("download").addEventListener("click", async () => {
             const text = textInput.value;
             if (text.trim() === "") {
                 alert("المرجو إدخال نص أو رابط أولاً لإنشاء الـQR Code.");
                 return;
             }
-
             try {
                 if (currentFrame !== 'default' || bottomTextElement.value.trim()) {
                     const combinedCanvas = await createCombinedCanvas();
@@ -668,21 +749,17 @@
                 } else {
                     qrCode.download({ extension: "png", name: "qr-code" });
                 }
-
             } catch (e) {
                 console.error("Error during download:", e);
                 alert("وقع خطأ أثناء التحميل. المرجو المحاولة مرة أخرى.");
             }
         });
-
-        // دالة المشاركة المعدلة
         document.getElementById("share").addEventListener("click", async () => {
             const text = textInput.value;
             if (text.trim() === "") {
                 alert("المرجو إدخال نص أو رابط أولاً للمشاركة.");
                 return;
             }
-
             try {
                 if (currentFrame !== 'default' || bottomTextElement.value.trim()) {
                     const combinedCanvas = await createCombinedCanvas();
@@ -723,12 +800,10 @@
                 alert("وقع خطأ أثناء المشاركة. المرجو المحاولة مرة أخرى.");
             }
         });
-
-        // في البداية: تحديث الواجهة بناءً على حالة حقل النص
         updateFrameTextPreviews();
         setActiveColorSwatch(currentQRColor);
         setActiveFrameSwatch(currentFrame);
-        updateFramePreviewsColor(); // زدنا هاد السطر باش الأيقونات يتلونوا
+        updateFramePreviewsColor();
         updateDisplay();
     </script>
 </body>
