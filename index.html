@@ -423,6 +423,8 @@
         let currentFrame = "default";
         let currentFrameText = "Scan Me!";
         let logoImage = null;
+        // هنا قمنا بتحديث رابط الصورة باش يولي بحال الرابط اللي فـHTML
+        const FRAME_IMAGE_SRC = "https://i.postimg.cc/2yj7xHxC/scan-me-Mesa-de-trabajo-1.png";
 
         const qrCode = new QRCodeStyling({
             width: 1000,
@@ -453,6 +455,7 @@
         });
 
         qrCode.append(qrDiv);
+        frameImage.src = FRAME_IMAGE_SRC;
 
         async function createCombinedCanvas() {
             const text = textInput.value;
@@ -475,113 +478,129 @@
             const textPadding = 40;
             const bannerHeight = 100;
             const framePadding = 50;
-            const frameImageSrc = "https://i.postimg.cc/y8bPtKng/Picsart-25-08-05-15-09-36-797.png";
+
             let totalWidth = qrWidth + (framePadding * 2);
             let totalHeight = qrHeight + (framePadding * 2);
-            if (bottomTextValue.trim()) {
+
+            if (bottomTextValue.trim() && currentFrame !== "image-frame") {
                 const tempCtx = document.createElement("canvas").getContext("2d");
                 const fontSize = 100;
                 tempCtx.font = `bold ${fontSize}px Arial`;
                 const textMetrics = tempCtx.measureText(bottomTextValue);
                 totalHeight += fontSize + textPadding;
             }
-            if (currentFrame !== "default" && currentFrame !== "image-frame") {
+
+            if (currentFrame !== "default" && currentFrame !== "image-frame" && currentFrame !== "top-banner" && currentFrame !== "rounded-frame" && currentFrame !== "bottom-banner") {
+                 // No additional height for image frames
+            } else if (currentFrame === "top-banner" || currentFrame === "rounded-frame") {
+                totalHeight += bannerHeight;
+            } else if (currentFrame === "bottom-banner") {
                 totalHeight += bannerHeight;
             }
-            if (currentFrame === "image-frame") {
-                const img = new Image();
-                img.src = frameImageSrc;
-                await new Promise((resolve) => { img.onload = resolve; });
-                totalWidth = img.width;
-                totalHeight = img.height;
-            }
+
             const combinedCanvas = document.createElement("canvas");
             const ctx = combinedCanvas.getContext("2d");
-            combinedCanvas.width = totalWidth;
-            combinedCanvas.height = totalHeight;
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(0, 0, combinedCanvas.width, combinedCanvas.height);
-            let qrYPosition = 0;
-            if (currentFrame === "top-banner" || currentFrame === "rounded-frame") {
-                const bannerY = 0;
-                const bannerX = 0;
-                const bannerW = combinedCanvas.width;
-                const bannerH = bannerHeight;
-                ctx.fillStyle = currentQRColor;
-                if (currentFrame === "top-banner") {
+
+            if (currentFrame === "image-frame") {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.src = FRAME_IMAGE_SRC;
+                await new Promise((resolve) => { img.onload = resolve; img.onerror = () => { console.error("Failed to load frame image for canvas."); resolve(); }; });
+                
+                totalWidth = img.width;
+                totalHeight = img.height;
+                
+                combinedCanvas.width = totalWidth;
+                combinedCanvas.height = totalHeight;
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, combinedCanvas.width, combinedCanvas.height);
+                
+                // Draw the frame image
+                ctx.drawImage(img, 0, 0, totalWidth, totalHeight);
+                
+                // Draw the QR code over the image frame
+                const qrSize = totalWidth * 0.6; // Adjust size
+                const qrX = (totalWidth - qrSize) / 2;
+                const qrY = (totalHeight * 0.6) - (qrSize / 2);
+                ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
+            } else { // Handle other frames
+                combinedCanvas.width = totalWidth;
+                combinedCanvas.height = totalHeight;
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, combinedCanvas.width, combinedCanvas.height);
+                let qrYPosition = 0;
+                
+                if (currentFrame === "top-banner" || currentFrame === "rounded-frame") {
+                    const bannerY = 0;
+                    const bannerX = 0;
+                    const bannerW = combinedCanvas.width;
+                    const bannerH = bannerHeight;
+                    ctx.fillStyle = currentQRColor;
+                    if (currentFrame === "top-banner") {
+                        ctx.beginPath();
+                        ctx.moveTo(bannerX, bannerY);
+                        ctx.lineTo(bannerX + bannerW, bannerY);
+                        ctx.lineTo(bannerX + bannerW, bannerY + bannerH * 0.8);
+                        ctx.lineTo(bannerX + bannerW / 2, bannerY + bannerH);
+                        ctx.lineTo(bannerX, bannerY + bannerH * 0.8);
+                        ctx.closePath();
+                        ctx.fill();
+                    } else if (currentFrame === "rounded-frame") {
+                        ctx.beginPath();
+                        const radius = 30;
+                        ctx.moveTo(bannerX + radius, bannerY);
+                        ctx.lineTo(bannerX + bannerW - radius, bannerY);
+                        ctx.quadraticCurveTo(bannerX + bannerW, bannerY, bannerX + bannerW, bannerY + radius);
+                        ctx.lineTo(bannerX + bannerW, bannerY + bannerH);
+                        ctx.lineTo(bannerX, bannerY + bannerH);
+                        ctx.lineTo(bannerX, bannerY + radius);
+                        ctx.quadraticCurveTo(bannerX, bannerY, bannerX + radius, bannerY);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                    ctx.font = `bold 60px Arial`;
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(frameTextValue, combinedCanvas.width / 2, bannerH / 2);
+                    qrYPosition = bannerH;
+                    ctx.drawImage(qrCanvas, (combinedCanvas.width - qrWidth) / 2, qrYPosition + (framePadding / 2));
+                } else if (currentFrame === "bottom-banner") {
+                     ctx.drawImage(qrCanvas, (combinedCanvas.width - qrWidth) / 2, (framePadding / 2));
+                     qrYPosition = 0;
+                } else { // default frame
+                    ctx.drawImage(qrCanvas, (combinedCanvas.width - qrWidth) / 2, (framePadding / 2));
+                }
+                
+                if (bottomTextValue.trim()) {
+                    const fontSize = 70;
+                    ctx.font = `bold ${fontSize}px Arial`;
+                    ctx.fillStyle = '#000000';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'top';
+                    ctx.fillText(bottomTextValue, combinedCanvas.width / 2, qrYPosition + qrHeight + framePadding + textPadding);
+                }
+                
+                if (currentFrame === "bottom-banner") {
+                    const bannerY = qrYPosition + qrHeight + framePadding;
+                    const bannerX = 0;
+                    const bannerW = combinedCanvas.width;
+                    const bannerH = bannerHeight;
+                    ctx.fillStyle = currentQRColor;
                     ctx.beginPath();
-                    ctx.moveTo(bannerX, bannerY);
-                    ctx.lineTo(bannerX + bannerW, bannerY);
-                    ctx.lineTo(bannerX + bannerW, bannerY + bannerH * 0.8);
-                    ctx.lineTo(bannerX + bannerW / 2, bannerY + bannerH);
-                    ctx.lineTo(bannerX, bannerY + bannerH * 0.8);
-                    ctx.closePath();
-                    ctx.fill();
-                } else if (currentFrame === "rounded-frame") {
-                    ctx.beginPath();
-                    const radius = 30;
-                    ctx.moveTo(bannerX + radius, bannerY);
-                    ctx.lineTo(bannerX + bannerW - radius, bannerY);
-                    ctx.quadraticCurveTo(bannerX + bannerW, bannerY, bannerX + bannerW, bannerY + radius);
+                    ctx.moveTo(bannerX, bannerY + bannerH * 0.2);
+                    ctx.lineTo(bannerX + bannerW / 2, bannerY);
+                    ctx.lineTo(bannerX + bannerW, bannerY + bannerH * 0.2);
                     ctx.lineTo(bannerX + bannerW, bannerY + bannerH);
                     ctx.lineTo(bannerX, bannerY + bannerH);
-                    ctx.lineTo(bannerX, bannerY + radius);
-                    ctx.quadraticCurveTo(bannerX, bannerY, bannerX + radius, bannerY);
                     ctx.closePath();
                     ctx.fill();
+                    ctx.font = `bold 60px Arial`;
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(frameTextValue, combinedCanvas.width / 2, bannerY + bannerH / 2);
                 }
-                ctx.font = `bold 60px Arial`;
-                ctx.fillStyle = '#FFFFFF';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(frameTextValue, combinedCanvas.width / 2, bannerH / 2);
-                qrYPosition = bannerH;
-                ctx.drawImage(qrCanvas, (combinedCanvas.width - qrWidth) / 2, qrYPosition + (framePadding / 2));
-            } else if (currentFrame === "bottom-banner") {
-                 ctx.drawImage(qrCanvas, (combinedCanvas.width - qrWidth) / 2, (framePadding / 2));
-            } else if (currentFrame === "image-frame") {
-                const img = new Image();
-                img.src = frameImageSrc;
-                await new Promise((resolve) => { img.onload = resolve; });
-                // draw image frame first
-                ctx.drawImage(img, 0, 0, combinedCanvas.width, combinedCanvas.height);
-                // draw QR code over the image frame
-                const qrSize = combinedCanvas.width * 0.5; // QR code takes up 50% of the image
-                const qrX = (combinedCanvas.width - qrSize) / 2;
-                const qrY = (combinedCanvas.height - qrSize) / 2;
-                ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
-            } else { // default frame
-                ctx.drawImage(qrCanvas, (combinedCanvas.width - qrWidth) / 2, (framePadding / 2));
-            }
-            if (currentFrame === "image-frame") {
-                // do nothing, text is part of image frame
-            } else if (bottomTextValue.trim()) {
-                const fontSize = 70;
-                ctx.font = `bold ${fontSize}px Arial`;
-                ctx.fillStyle = '#000000';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'top';
-                ctx.fillText(bottomTextValue, combinedCanvas.width / 2, qrYPosition + qrHeight + framePadding + textPadding);
-            }
-            if (currentFrame === "bottom-banner") {
-                const bannerY = qrYPosition + qrHeight + framePadding;
-                const bannerX = 0;
-                const bannerW = combinedCanvas.width;
-                const bannerH = bannerHeight;
-                ctx.fillStyle = currentQRColor;
-                ctx.beginPath();
-                ctx.moveTo(bannerX, bannerY + bannerH * 0.2);
-                ctx.lineTo(bannerX + bannerW / 2, bannerY);
-                ctx.lineTo(bannerX + bannerW, bannerY + bannerH * 0.2);
-                ctx.lineTo(bannerX + bannerW, bannerY + bannerH);
-                ctx.lineTo(bannerX, bannerY + bannerH);
-                ctx.closePath();
-                ctx.fill();
-                ctx.font = `bold 60px Arial`;
-                ctx.fillStyle = '#FFFFFF';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(frameTextValue, combinedCanvas.width / 2, bannerY + bannerH / 2);
             }
             return combinedCanvas;
         }
